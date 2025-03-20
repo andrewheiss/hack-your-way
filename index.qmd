@@ -1,0 +1,353 @@
+---
+title: "Hack Your Way To Scientific Glory <span class='fs-6 text-uppercase'>(recreation)</span>"
+format:
+  html: 
+    page-layout: full
+    anchor-sections: false
+---
+
+:::::: {.grid .interactive}
+
+::::: {.g-col-12 .g-col-md-9}
+
+You're a social scientist with a hunch: **The U.S. economy is affected by whether Republicans or Democrats are in office.** Try to show that a connection exists, using real data going back to 1948. For your results to be publishable in an academic journal, you'll need to prove that they are “statistically significant” by achieving a low enough p-value.
+
+:::::
+
+::::: {.g-col-12 .g-col-md-3 .small}
+
+Recreation of FiveThirtyEight's "Hack Your Way To Scientific Glory" ([archived here](https://web.archive.org/web/20250130080601/https://projects.fivethirtyeight.com/p-hacking/)), but with Observable JS.
+
+[{{< fa brands github >}} Source code](https://github.com/andrewheiss/hack-your-way)
+
+:::::
+
+::::::
+
+
+:::::: {.grid .interactive}
+
+::::: {.g-col-12 .g-col-md-3}
+
+:::: {.party}
+
+### [1]{.number} Choose a political party
+
+```{ojs}
+//| echo: false
+
+viewof party = Inputs.radio(
+  new Map([
+    ["Democrats", "dem"],
+    ["Republicans", "gop"]
+  ]),
+  // {value: "dem", label: "Party"}
+  {value: "dem"}
+)
+```
+
+::::
+
+### [2]{.number} Define terms
+
+Which politicians do you want to include?
+
+```{ojs}
+//| echo: false
+viewof polTerms = Inputs.checkbox(
+  new Map([
+    ["President", "prez"],
+    ["Governors", "gov"],
+    ["Senators", "sen"],
+    ["Representatives", "rep"]
+  ]),
+  {value: ["prez", "gov"]}
+)
+```
+
+---
+
+How do you want to measure economic performance?
+
+```{ojs}
+//| echo: false
+viewof econTerms = Inputs.checkbox(
+  new Map([
+    ["Unemployment", "unemp"],
+    ["Inflation", "inflation"],
+    ["GDP", "gdp"],
+    ["Stock prices", "stocks"]
+  ]),
+  {value: ["gdp", "inflation", "stocks"]}
+)
+```
+
+---
+
+Other options
+
+```{ojs}
+//| echo: false
+viewof weighted = Inputs.toggle(
+  {label: "Factor in power", value: false}
+)
+```
+
+::: {.option-note}
+Weight more powerful positions more heavily
+:::
+
+
+```{ojs}
+//| echo: false
+viewof excludeRecessions = Inputs.toggle(
+  {label: "Exclude recessions", value: true}
+)
+```
+
+::: {.option-note}
+Don't include economic recessions
+:::
+
+:::::
+
+::::: {.g-col-12 .g-col-md-6}
+
+```{ojs}
+//| label: load-data
+//| echo: false
+
+full_data = {
+  const raw_data = await FileAttachment("data/538_p_hacking.csv").csv({ typed: true } );
+
+  return raw_data.map(d => { 
+    d.gdp = d.gdp === "NA" ? null : d.gdp;
+    d.unemp = d.unemp === "NA" ? null : d.unemp;
+    d.inflation = d.inflation === "NA" ? null : d.inflation;
+    d.stocks = d.stocks === "NA" ? null : d.stocks;
+    d.recession = d.recession === "TRUE";
+    return d; 
+  });
+}
+
+function data_to_use(data, party, pol_terms, econ_terms, exclude_recessions, weighted) {
+  let filtered_data = data;
+
+  if (exclude_recessions) {
+    filtered_data = filtered_data.filter(d => !d.recession);
+  }
+
+  filtered_data = filtered_data.filter(d => econ_terms.every(term => d[term] !== null));
+
+  filtered_data = filtered_data.map(d => {
+    const pol_score = pol_terms.reduce((sum, term) => {
+      const value = d[`${term}_${party}`];
+      const weight = weighted
+        ? (term === "prez" ? 100
+          : term === "gov" ? 10
+          : term === "sen" ? 5
+          : term === "rep" ? 1
+          : 1)
+        : 1;
+      return sum + (value * weight);
+    }, 0);
+
+    const econ_score = econ_terms.reduce((sum, term) => sum + d[term], 0);
+
+    return { ...d, pol_score, econ_score, party };
+  });
+
+  return filtered_data;
+}
+```
+
+### [3]{.number} Is there a relationship?
+
+Given how you've defined your terms, does the economy do better, worse or about the same when more Democrats are in power? Each dot below represents one month of data.
+
+```{ojs}
+//| echo: false
+
+filtered_data = data_to_use(full_data, party, polTerms, econTerms, excludeRecessions, weighted)
+
+x_label = {
+  if (party === "dem") {
+    if (weighted) {
+      return "More Democratic power";
+    } else {
+      return "More Democrats in office";
+    }
+  } else {
+    if (weighted) {
+      return "More Republican power";
+    } else {
+      return "More Republicans in office";
+    }
+  }
+}
+
+Plot.plot({
+  width: 680,
+  height: 680 / 1.2,
+  // width: width,
+  // height: width / 1.1,
+  marginLeft: 80,
+  marginRight: 80,
+  marginBottom: 80,
+  marks: [
+    Plot.axisX({
+      label: x_label,
+      fontSize: 24,
+      fontWeight: "bold",
+      fontFamily: "IBM Plex Sans Condensed",
+      ticks: [],
+      tickSize: 0,
+      labelAnchor: "center"
+    }),
+    Plot.axisY({
+      label: "A better economy",
+      fontSize: 24,
+      fontWeight: "bold",
+      fontFamily: "IBM Plex Sans Condensed",
+      ticks: [],
+      tickSize: 0,
+      labelAnchor: "center",
+      labelRotate: -90
+    }),
+    Plot.dot(filtered_data, {
+      x: "pol_score", y: "econ_score", 
+      fill: d => d.party === "dem" ? "#35A1D5" : "#FF5D40", 
+      r: 8, opacity: 0.25
+    }),
+    Plot.linearRegressionY(filtered_data, {
+      x: "pol_score", y: "econ_score", ci: 0, 
+      stroke: "black", strokeWidth: 3
+    }),
+    Plot.frame({
+      insetTop: -20,
+      insetBottom: -30,
+      insetLeft: -30,
+      insetRight: -30
+    })
+  ]
+})
+```
+
+:::::
+
+::::: {.g-col-12 .g-col-md-3}
+
+```{ojs}
+//| echo: false
+
+jStat = require("https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js")
+
+modelResults = {
+  const x = filtered_data.map(d => d.pol_score);
+  const y = filtered_data.map(d => d.econ_score);
+
+  // jStat needs a column with a 1 for the intercept term
+  const X = x.map(x_i => [1, x_i]);
+
+  const result = jStat.models.ols(y, X);
+
+  return result;
+}
+
+function formatPValue(p) {
+  if (p < 0.01) return "<&nbsp;0.01";
+  return p.toFixed(3);
+}
+```
+
+### [4]{.number} Is your result significant?
+
+If there were no connection between the economy and politics, what is the probability that you'd get results at least as strong as yours? That probability is your p-value, and by convention, you need a **p-value of 0.05 or less** to get published.
+
+```{ojs}
+//| echo: false
+
+Plot.plot({
+  width: 400,
+  x: {domain: [1, 0], grid: true, label: null},
+  marks: [
+    Plot.axisX({
+      ticks: 100, text: null, tickSize: 5,
+      // Make the last 5 ticks thicker and green
+      stroke: (d, i, n) => i >= n.length - 5 ? "#44AB43" : "#666666",
+      strokeWidth: (d, i, n) => i >= n.length - 5 ? 2 : 1
+    }),
+    Plot.axisX({
+      ticks: 20, text: null, tickSize: 10,
+      stroke: (d, i, n) => i >= n.length - 2 ? "#44AB43" : "#666666",
+      strokeWidth: (d, i, n) => i >= n.length - 2 ? 2 : 1
+    }),
+    Plot.axisX({
+      ticks: 3, tickSize: 15, 
+      fontFamily: "IBM Plex Sans Condensed", fontSize: 16,
+      stroke: (d, i, n) => i >= n.length - 1 ? "#44AB43" : "#666666",
+      strokeWidth: (d, i, n) => i >= n.length - 1 ? 2 : 1
+    }),
+    Plot.dot([{
+      x: modelResults.t.p[1]
+    }], {
+      x: "x", r: 8, symbol: "triangle", rotate: 180,
+      fill: d => d.x < 0.05 ? "#44AB43" : "#333333"
+    })
+  ]
+})
+```
+
+```{ojs}
+//| echo: false
+
+pvalueParty = party === "dem" ? "Democrats" : "Republicans"
+effect = modelResults.coef[1] > 0 ? "positive" : "negative"
+
+pvalueOutput = {
+  let result, cssClass, text;
+
+  if (modelResults.t.p[1] < 0.05) {
+    result = "Publishable"
+    cssClass = "publishable"
+    text = html`You achieved a p-value of <b>${formatPValue(modelResults.t.p[1])}</b> and showed that <b>${pvalueParty}</b> have a <b>${effect}</b> effect on the economy.`
+  } else if (modelResults.t.p[1] > 0.05 & modelResults.t.p[1] < 0.1) {
+    result = "Almost"
+    cssClass = "almost"
+    text = html`Your <b>${formatPValue(modelResults.t.p[1])}</b> p-value is close to the 0.05 threshold. Try tweaking your variables to see if you can push it over the line!`
+  } else {
+    result = "Unpublishable"
+    cssClass = "unpublishable"
+    text = html`With a p-value of <b>${formatPValue(modelResults.t.p[1])}</b>, your findings are not statistically significant. Try defining your terms differently.`
+  }
+
+  return {result, cssClass, text};
+}
+```
+
+::: {.results}
+
+```{ojs}
+//| echo: false
+
+html`<div class="pvalue-result">
+  Result: <span class="${pvalueOutput.cssClass}">${pvalueOutput.result}</span>
+  ${pvalueOutput.text}
+</div>`
+```
+
+${pvalueOutput.text}
+
+:::
+
+---
+
+::: {.additional-details .small}
+If you're interested in reading real (and more rigorous) studies on the connection between politics and the economy, see the work of [Larry Bartels](http://www.amazon.com/Unequal-Democracy-Political-Economy-Gilded/dp/0691146233) and [Alan Blinder and Mark Watson](https://www.princeton.edu/~mwatson/papers/Presidents_Blinder_Watson_Nov2013.pdf).
+
+Data from [The \@unitedstates Project](https://web.archive.org/web/20250103180837/https://theunitedstates.io/), [National Governors Association](http://www.nga.org/cms/FormerGovBios), [Bureau of Labor Statistics](http://data.bls.gov/timeseries/LNS14000000), [Federal Reserve](https://research.stlouisfed.org/fred2/series/CPIAUCSL) [Bank of St. Louis](https://research.stlouisfed.org/fred2/series/GDP) and [Yahoo Finance](http://finance.yahoo.com/q?s=%5EGSPC).
+:::
+
+:::::
+
+::::::

@@ -1,0 +1,23 @@
+project:
+  type: website
+  preview: 
+    port: 4444
+  render: 
+    - "index.qmd"
+  resources: 
+    - "data/"
+
+website:
+  title: "Hack Your Way To Scientific Glory"
+  navbar: false
+
+  open-graph:
+    # image: "/img/banner.png"
+    locale: en_US
+    description: "Recreation of FiveThirtyEight's \"Hack Your Way To Scientific Glory\" with Observable JS"
+
+format:
+  html:
+    theme:
+      - cosmo
+      - styles.scss

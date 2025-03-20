@@ -1,0 +1,11 @@
+# R stuff
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# Quarto stuff
+/.quarto/
+_site/
+_freeze/
+/.luarc.json
