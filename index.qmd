@@ -18,7 +18,7 @@ You're a social scientist with a hunch: **The U.S. economy is affected by whethe
 
 Recreation of FiveThirtyEight's "Hack Your Way To Scientific Glory" ([archived here](https://web.archive.org/web/20250130080601/https://projects.fivethirtyeight.com/p-hacking/)), but with Observable JS.
 
-[{{< fa brands github >}} Source code](https://github.com/andrewheiss/hack-your-way)
+[{{< fa brands github >}} Code and data](https://github.com/andrewheiss/hack-your-way)
 
 :::::
 
