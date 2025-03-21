@@ -69,7 +69,7 @@ And theirs—it’s the same!
 
 ## Regressions
 
-The original interactive site didn’t run any regressions. Instead, it had a JSON-based dataset behind-the-scenes with the p-value for every possible combination of party × politicans × economic outcome × weighting × recessions (2×2×4×4×2 = 128 p-values), and it would look up the values and points as people changed options.
+The original interactive site didn’t run any regressions. Instead, it had a JSON-based dataset behind-the-scenes with the p-value for every possible combination of party × politicans (15 possible combinations) × economic outcome (15 possible combinations) × weighting × recessions (2×2×15×15×2 = 1,800 p-values!), and it would look up the values and points as people changed options.
 
 Here, I use Observable Plot to plot the actual regression line live with `Plot.linearRegressionY()`, and I use [jStat](https://jstat.github.io/) to run the regression live and extract the p-value. Everything happens in the browser!
 
