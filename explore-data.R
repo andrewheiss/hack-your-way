@@ -53,7 +53,7 @@ data_to_use <- function(
 ) {
   stopifnot(
     "Data must be provided" = !missing(data),
-    "Party must be 'dem' or 'rep'" = party %in% c("dem", "rep"),
+    "Party must be 'dem' or 'gop'" = party %in% c("dem", "gop"),
     "pol_terms must be one or more of 'prez', 'gov', 'sen', 'rep'" = all(
       pol_terms %in% c("prez", "gov", "sen", "rep")
     ),
