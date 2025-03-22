@@ -62,6 +62,16 @@ ggplot(pol_coefs, aes(x = 1:nrow(pol_coefs), y = estimate)) +
   labs(x = "Model specification", y = "Coefficient for `pol_score`") +
   theme_minimal()
 
+ggplot(pol_coefs, aes(x = 1:nrow(pol_coefs), y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high, color = party)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(x = "Model specification", y = "Coefficient for `pol_score`") +
+  theme_minimal()
+
+pol_coefs |> 
+  group_by(party) |> 
+  summarize(avg_estimate = mean(estimate))
+
 ggplot(pol_coefs, aes(x = p.value)) +
   geom_histogram(binwidth = 0.05, boundary = 0, color = "white") +
   geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
